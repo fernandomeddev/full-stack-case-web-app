@@ -42,7 +42,6 @@ export function Signup() {
       toast.success('Usuário registrado com sucesso');
       form.reset();
     } catch (error) {
-      console.log(error);
       toast.error('Erro ao registrar usuário');
     }
   }

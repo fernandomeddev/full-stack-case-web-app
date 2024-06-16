@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +26,6 @@ const updateTaskSchema = z.object({
 type UpdateTaskData = z.infer<typeof updateTaskSchema>;
 
 export function UpdateTaskForm( { setOpen, task } : IUpdateTaskForm) {
-    console.log(task)
   const [errorMessage, setErrorMessage] = React.useState<string>("");
 
   const form = useForm<UpdateTaskData>({
@@ -51,7 +50,7 @@ export function UpdateTaskForm( { setOpen, task } : IUpdateTaskForm) {
       await handleUpdateTaskFn({
         title: data.title,
         description: data.description,
-        status: task.status,
+        status: data.status,
         id: task.id
       });
       toast.success("Tarefa Atualizada com sucesso");
@@ -76,19 +75,25 @@ export function UpdateTaskForm( { setOpen, task } : IUpdateTaskForm) {
           <Textarea {...form.register('description') }  id="description" />
           {form.formState.errors.description && <span className="text-xs text-red-500">{form.formState.errors.description.message}</span>}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="title">Status</Label>
-          <Select {...form.register('status')}>
-            <SelectTrigger>
-                <SelectValue placeholder='status' />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value='pending'>Pendente</SelectItem>
-                <SelectItem value='completed'>Concluído</SelectItem>
-            </SelectContent>
-          </Select>
-          {form.formState.errors.title && <span className="text-xs text-red-500">{form.formState.errors.title.message}</span>}
-        </div>
+        <Controller
+          control={form.control} 
+          name="status"
+          render={({ field }) => (
+            <div className="space-y-2">
+              <Label htmlFor="title">Status</Label>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                    <SelectValue placeholder='status' />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value='pending'>Pendente</SelectItem>
+                    <SelectItem value='completed'>Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.title && <span className="text-xs text-red-500">{form.formState.errors.title.message}</span>}
+            </div>
+          )} 
+        />
         <Button disabled={form.formState.isSubmitting || isPending } type="submit">Atualizar</Button>
         {isError && <span className="text-xs text-red-500 block">{errorMessage}</span>}
       </form>

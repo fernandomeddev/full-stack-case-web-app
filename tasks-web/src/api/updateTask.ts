@@ -8,7 +8,7 @@ interface IUpdateTaskRequest {
 }
 
 export async function updateTask({ title, description, status, id }: IUpdateTaskRequest) {
-    await api.put(`/gateway/task/update/${id}`, {
+    await api.put(`/gateway/task/${id}`, {
         title,
         description,
         status

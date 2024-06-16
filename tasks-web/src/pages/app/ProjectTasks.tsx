@@ -1,22 +1,45 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { deleteTask } from "@/api/deleteTask";
 import { getProjectTasks } from "@/api/getTasks"
+import { UpdateTaskModal } from "@/components/features/tasks/updateTaskModal";
 import { NewTaskForm } from "@/components/forms/project/NewTaskForm";
-import { UpdateTaskForm } from "@/components/forms/project/UpdateTaskForm";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
+import { ChevronLeft } from "lucide-react";
 import React from "react";
-import { useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
+import { toast } from "sonner";
 
 export function ProjectTasks() {
     const [open, setOpen] = React.useState(false)
-    const [openUpdate, setOpenUpdate] = React.useState(false)
+    
     const { projectId } = useParams() as { projectId: string }
-    const queryClient = useQueryClient()
     const {data: tasks, isLoading, isError } = useQuery({
         queryKey: ['tasks', projectId],
-        queryFn: () => getProjectTasks(projectId),
+        queryFn: async () => await getProjectTasks(projectId),
     })
+
+    const queryClient = useQueryClient()
+    const { mutateAsync: handleDeleteTaskFn, isPending } = useMutation({
+        mutationFn: deleteTask,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ['tasks']
+            })
+        }
+    })
+
+    async function handleDeleteTask(taskId: string) {
+        try {
+            await handleDeleteTaskFn(taskId);
+            toast.success("Projeto excluído com sucesso");
+        } catch (error: any) {
+            const errrorMessages = error.response.data.errors.map((e: any) => e.message).join(", ");
+            toast.error(errrorMessages);
+        }
+    }
 
     if (isLoading) {
         return <div>Loading...</div>
@@ -24,12 +47,11 @@ export function ProjectTasks() {
     if (isError) {
         return <div>Error</div>
     }
-    console.log(tasks)
 
     return (
         <div className="py-6 container">
-            <div className="grid grid-cols-3 place-items-center w-full">
-                <div></div>
+            <div className=" flex items-center justify-between w-full">
+                <Link className={buttonVariants({size:'icon'})} to=".."><ChevronLeft className="size-5" /></Link>
                 <h1 className="whitespace-nowrap">TAREFAS DO PROJETO</h1>
                 <Dialog open={open} onOpenChange={setOpen} >
                     <DialogTrigger asChild>
@@ -51,41 +73,26 @@ export function ProjectTasks() {
             </div>
             <div className=" mt-10 space-y-4">
                 {!tasks || tasks.length === 0 && <div>Nenhuma tarefa encontrada</div>}
-                {tasks && tasks?.map((task) => (
-                    <Card key={task.id}>
-                        <CardHeader>
-                            <CardTitle>{task.title}</CardTitle>
-                            <CardDescription>{task.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <span>
-                                {task.status}
-                            </span>
-                        </CardContent>
-                        <CardFooter className="gap-2 justify-end">
-                            <Dialog open={openUpdate} onOpenChange={setOpenUpdate} >
-                                <DialogTrigger asChild>
-                                    <Button>Editar</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Atualizar Tarefa</DialogTitle>
-                                        <DialogDescription>Atualize as informações da tarefa</DialogDescription>
-                                    </DialogHeader>
-                                    <div>
-                                        <UpdateTaskForm task={task} setOpen={setOpenUpdate} />
-                                    </div>
-                                    <DialogFooter>
-                                        <DialogClose>Cancelar</DialogClose>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                            
-                            <Button>Excluir</Button>
-                        </CardFooter>
-                    </Card>
-                ))}
+                {tasks && tasks?.map((task) => {
+                    return (
+                        <Card key={task.id}>
+                            <CardHeader>
+                                <CardTitle>{task.title}</CardTitle>
+                                <CardDescription>{task.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <span>
+                                    {task.status}
+                                </span>
+                            </CardContent>
+                            <CardFooter className="gap-2 justify-end">
+                                <UpdateTaskModal task={task} />
+                                <Button disabled={ isPending } onClick={() => handleDeleteTask(task.id)}>Excluir</Button>
+                            </CardFooter>
+                        </Card>
+                    )
+                })}
             </div>
         </div>
     )
-}   
+}
