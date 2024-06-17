@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@/lib/services/api";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/auth/authContext";
 
 const signinSchema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -15,6 +16,7 @@ const signinSchema = z.object({
 type SigninData = z.infer<typeof signinSchema>;
 
 export function Signin() {
+  const { handleSetToken, setLoading } = useAuth();
   const navigate = useNavigate();
   const form = useForm<SigninData>({
     resolver: zodResolver(signinSchema),
@@ -25,14 +27,21 @@ export function Signin() {
   });
 
   async function handleSignin(data: SigninData) {
+    setLoading(true);
     try {
-      await api.post('/public/auth/login', {
+      const res = await api.post('/public/auth/login', {
         email: data.email,
         password: data.password,
       });
-      navigate('/');
+      if (res.data.data) {
+        api.defaults.headers.common.Authorization = `Bearer ${res.data.data}`;
+        handleSetToken(res.data.data);
+        navigate('/', { replace: true });
+      }
     } catch (error) {
       toast.error('Erro ao Autenticar usuário');
+    } finally {
+      setLoading(false);
     }
   }
 
